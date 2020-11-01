@@ -1,0 +1,523 @@
+# portfolio
+자바 고객관리 시스템 소스
+package 연습장;
+
+import java.awt.BorderLayout;
+import java.awt.CardLayout;
+import java.awt.Color;
+import java.awt.Container;
+import java.awt.Dimension;
+import java.awt.FileDialog;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.util.StringTokenizer;
+import java.util.Vector;
+
+import javax.swing.ButtonGroup;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JCheckBoxMenuItem;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.SwingConstants;
+import javax.swing.border.LineBorder;
+import javax.swing.border.TitledBorder;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableColumnModel;
+
+public class Test extends JFrame{
+	
+	//내부클래스 객체 미리 생성
+	West west = new West();
+	Buttons buttons = new Buttons();
+	Showtable showtable = new Showtable();
+	MenuMain menumain = new MenuMain();
+
+	
+	FileDialog read_open;
+	FileDialog save_open;
+	
+	int update_row; //전역 변수
+	
+	//외부 생성자 구현
+	public Test() {
+		OUTTER: while(true) {
+			ImageIcon icon = new ImageIcon("imagess/고객관리.jpg");
+			JOptionPane.showMessageDialog(null, null, "고객정보관리시스템", 
+					                      JOptionPane.NO_OPTION, icon);
+			//패스워드 입력받아 인증처리 대화 상자 만들기
+			String password = JOptionPane.showInputDialog("고객관리 시스템" + "\n" + "패스워드 입력");
+			String passwd = "manage1234";
+			if(password == null) {
+				break OUTTER;
+			}else if(password.equals(passwd)) {
+				JOptionPane.showMessageDialog(null, "비밀번호 일치" + "\n" +"환영합니다.");
+				setTitle("고객정보 관리 시스템");
+				setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+				
+				add(west,BorderLayout.WEST);
+				west.setLayout(new GridLayout(2, 0));
+				add(buttons, BorderLayout.SOUTH);
+				add(showtable.scroll, BorderLayout.CENTER);
+				add(menumain.menu_bar, BorderLayout.NORTH);
+				
+				setSize(900, 800);
+				setLocation(700, 300);
+				setVisible(true);
+				
+				break OUTTER;
+			}else {
+				JOptionPane.showMessageDialog(null, "입력한 비밀번호가 맞지않습니다." + "\n" + "'확인' 버튼을 누르세요.",
+						"에러 메시지",JOptionPane.ERROR_MESSAGE);
+				continue OUTTER;
+			}
+		}//end OUTTER;
+		
+	
+	}
+
+	class MenuMain extends JPanel implements ActionListener{
+		JMenuBar menu_bar;
+		JMenu file, sort, help;
+		JMenuItem open, save, exit, info;
+		JCheckBoxMenuItem name, phone, jumin;
+		
+		public MenuMain() {
+			menu_bar = new JMenuBar();
+			
+			file = new JMenu("파일");
+			sort = new JMenu("정렬");
+			help = new JMenu("도움말");
+			
+			open = new JMenuItem("파일 열기");
+			save = new JMenuItem("파일 저장");
+			exit = new JMenuItem("나가기");
+			info = new JMenuItem("프로그램정보");
+			
+			name = new JCheckBoxMenuItem("이름");
+			phone = new JCheckBoxMenuItem("핸드폰번호");
+			jumin = new JCheckBoxMenuItem("주민등록번호");
+			
+			
+			file.add(open);
+			file.add(save);
+			file.addSeparator();
+			file.add(exit);
+			
+			sort.add(name);
+			sort.add(phone);
+			file.addSeparator();
+			sort.add(jumin);
+			
+			help.add(info);
+			
+			menu_bar.add(file);
+			menu_bar.add(sort);
+			menu_bar.add(help);
+			
+			//이벤트 연결
+			open.addActionListener(this);
+			save.addActionListener(this);
+			exit.addActionListener(this);
+		}
+		
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			if(e.getActionCommand().equals("파일 열기")) {
+				open();
+			}else if(e.getActionCommand().equals("파일 저장")) {
+				save();
+			}else {
+				exit();
+			}
+			
+		}
+		public void open() {
+			StringTokenizer st;
+			Vector<String> vec;
+			
+			read_open = new FileDialog(Test.this, "파일 열기", FileDialog.LOAD);
+			read_open.setVisible(true);
+			
+			String fileDir = read_open.getDirectory();
+			String fileName = read_open.getFile();
+			String readfilename = fileDir + "\\" + fileName;
+			
+			try {
+				BufferedReader read = new BufferedReader(new FileReader(readfilename));
+				
+				//line은 한줄씩 불러오는 값 할당
+				String line = null;
+				while((line = read.readLine()) != null) {
+					st = new StringTokenizer(line, ",");
+					vec = new Vector<String>();
+					
+					while(st.hasMoreTokens()) {
+						vec.add(st.nextToken());
+					}
+					
+					String jumin_enc = vec.get(2);
+					jumin_enc = jumin_enc.replace(jumin_enc.substring(9, jumin_enc.length()), "******");
+					
+					vec.set(2,  jumin_enc);
+					showtable.data.addElement(vec);
+				}
+				showtable.dtm.fireTableDataChanged();
+				read.close(); //자원 해제
+				
+				
+			}catch(Exception e) {
+				System.out.println(e);
+			}
+			
+		}
+		public void save() {
+			save_open = new FileDialog(Test.this, "파일 저장", FileDialog.SAVE);
+			save_open.setVisible(true);
+			
+			String fileDir = save_open.getDirectory();
+			String fileName = save_open.getFile();
+			String savefilename = fileDir + "\\" + fileName;
+			
+			String str = "";
+			String temp = "";
+			
+			try {
+				BufferedWriter save = new BufferedWriter(new FileWriter(savefilename));
+				
+				for(int i=0; i<showtable.table.getRowCount(); i++) {
+					temp = showtable.data.elementAt(i).toString();
+					str = str + temp.substring(1, temp.length()-1) + "\n";
+				}
+				save.write(str);
+				save.close(); //자원해제
+			}catch(Exception e) {
+				System.out.println(e);
+			}
+		}
+		public void exit() {
+			System.exit(0);
+		}
+		
+	}
+	class Showtable extends MouseAdapter{
+		String colName[] = {"이름","핸드폰번호","주민등록번호"};
+		
+		Vector<Vector<String>> data;
+		Vector<String> col_name_vector;
+		
+		DefaultTableModel dtm;
+		JTable table;
+		JScrollPane scroll;
+		
+		public Showtable() {
+			
+			data = new Vector<Vector<String>>();
+			col_name_vector = new Vector<String>();
+			
+			for(int i=0; i<colName.length; i++) {
+				col_name_vector.add(colName[i]);
+			}
+			dtm = new DefaultTableModel(data, col_name_vector);
+			table = new JTable(dtm);
+			scroll = new JScrollPane(table);
+			
+			//이벤트 연결
+			table.addMouseListener(this);
+			
+			//사용자 정의 메소드 호출
+			tableSize();
+		}
+		@Override
+		public void mouseClicked(MouseEvent e) {
+			update_row = table.getSelectedRow();
+			
+			west.tf[0].setText((String)showtable.table.getValueAt(update_row, 0));
+			west.tf[1].setText((String)showtable.table.getValueAt(update_row, 1));
+			west.tf[2].setText((String)showtable.table.getValueAt(update_row, 2));
+			
+			//주민번호 수정 못하게하는 방법
+			west.tf[0].setEnabled(false);
+			west.tf[1].setEnabled(false);
+			west.tf[2].setEnabled(false);
+			
+			
+		}
+		//JTable의 셀 크기 변경 및 데이터값 중앙 정렬 시키는 메소드
+		private void tableSize() {
+			DefaultTableCellRenderer cell = new DefaultTableCellRenderer();
+			cell.setHorizontalAlignment(SwingConstants.CENTER);
+			TableColumnModel cellModel = table.getColumnModel();
+			
+			for(int i=0; i<cellModel.getColumnCount(); i++) {
+				cellModel.getColumn(i).setCellRenderer(cell);
+			}
+			table.getColumnModel().getColumn(0).setPreferredWidth(60);
+			table.getColumnModel().getColumn(1).setPreferredWidth(110);
+			table.getColumnModel().getColumn(2).setPreferredWidth(110);
+			
+			
+		}
+	}
+	class Buttons extends JPanel implements ActionListener{
+		
+		Vector<String> vector;
+		JButton add_btn, update_btn, del_btn, btn;
+		String juminNo;
+		CardLayout card;	
+		
+		public Buttons() {
+			card = new CardLayout();
+			setLayout(card);
+			
+			setLayout(new GridLayout(1, 4));
+			add_btn = new JButton("추가");
+			update_btn = new JButton("수정");
+			del_btn = new JButton("삭제");
+			btn = new JButton("검색");
+			
+			
+			add_btn.setBackground(Color.cyan);
+			update_btn.setBackground(Color.white);
+			del_btn.setBackground(Color.pink);
+			btn.setBackground(Color.GREEN);
+			
+			
+			add(add_btn);
+			add(update_btn);
+			add(del_btn);
+			add(btn);
+			
+			
+			//이벤트 연결
+			add_btn.addActionListener(this);
+			update_btn.addActionListener(this);
+			del_btn.addActionListener(this);
+			btn.addActionListener(this);
+			
+			
+		}
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			
+			
+			if(e.getActionCommand().equals("추가")) {
+				add_data();
+			}else if(e.getActionCommand().equals("수정")) {
+				update_data();
+			}else if(e.getActionCommand().equals("검색")) {
+				btn();
+			}else {
+				del_data();
+			}
+		}
+		public void btn() {
+			card.next(this);
+		}
+			
+		public void add_data() {
+			vector = new Vector<String>();
+			vector.add(west.tf[0].getText());
+			vector.add(west.tf[1].getText());
+			
+			juminNo = west.tf[2].getText();
+			
+			int [] weight = {2,3,4,5,6,7,0,8,9,2,3,4,5};
+			int sum = 0;
+			int i, temp, result;
+			
+			String regex = "[0-9]{6}-[0-9]{7}";
+			boolean check = juminNo.matches(regex);
+			
+			if(check == false) {
+				JOptionPane.showMessageDialog(null, "정확한 주민번호 형식에 맞춰 입력하세요.", 
+						"!입력오류!", JOptionPane.INFORMATION_MESSAGE);
+				west.tf[2].setText(null);
+				west.tf[2].requestFocus();
+				return;
+			}
+			for(i=0; i<13; i++) {
+				if(juminNo.charAt(i) == '-') continue;
+				sum = sum + ((juminNo.charAt(i)-48)*weight[i]);
+			}
+			temp = 11-(sum%11);
+			result = temp%10;
+			
+			if(result == (juminNo.charAt(13)-48)) {
+				JOptionPane.showMessageDialog(null, "올바른 주민번호 입니다.");
+				vector.add(west.tf[2].getText());
+			}else {
+				JOptionPane.showMessageDialog(null, "잘못된 주민번호 입니다.",
+						"!경고메세지!", JOptionPane.ERROR_MESSAGE);
+				west.tf[2].setText(null);
+				west.tf[2].requestFocus();
+				return;
+			}
+			
+			showtable.data.addElement(vector);
+			showtable.dtm.fireTableDataChanged();
+			
+			west.tf[0].setText(null);
+			west.tf[1].setText(null);
+			west.tf[2].setText(null);
+			west.tf[0].requestFocus();
+			
+			
+		}
+		public void update_data() {
+			update_row = showtable.table.getSelectedRow();
+			
+			showtable.table.setValueAt(west.tf[0].getText(), update_row, 0);
+			showtable.table.setValueAt(west.tf[1].getText(), update_row, 1);
+			
+			west.tf[0].setEnabled(true);
+			west.tf[1].setEnabled(true);
+			west.tf[2].setEnabled(true);
+			
+			west.tf[0].setText(null);
+			west.tf[1].setText(null);
+			west.tf[2].setText(null);
+		}
+		public void del_data() {
+			int yes_no_select = JOptionPane.showConfirmDialog(null, "정말 삭제하시겠습니까?", 
+					"삭제 확인창", JOptionPane.YES_NO_OPTION);
+			if(yes_no_select == JOptionPane.YES_OPTION) {
+				JTable tb = showtable.table;
+				int delete_row = tb.getSelectedRow();
+				if(delete_row == -1) {
+					return;
+				}else {
+					DefaultTableModel model = (DefaultTableModel) tb.getModel();
+					model.removeRow(delete_row);
+					west.tf[0].setText(null);
+					west.tf[1].setText(null);
+					west.tf[2].setText(null);
+					
+					west.tf[2].setEnabled(true);
+					west.tf[0].requestFocus();
+				}
+			}else {
+				return;
+			}
+		}
+		
+	}
+	
+	class West extends JPanel{
+			//'신상정보' 카드를 만들기 위한 JPanel 
+		JPanel search = new JPanel();	//'정보검색' 카드를 만들기 위한 JPanel
+		
+		
+		
+		JLabel ageLabel = new JLabel();
+		JLabel genderLabel = new JLabel();
+		JLabel chulLabel = new JLabel();
+		JLabel birthLabel = new JLabel();
+		
+		JLabel la;
+		JLabel la2;
+		JTextField tf[];
+		
+		
+		
+		
+		public West() {
+			JPanel input = new JPanel();
+			
+			input.setBorder(new TitledBorder(new LineBorder(Color.gray, 2), "입력"));
+			
+			String text[] = {"이름","핸드폰번호","주민등록번호"};
+			tf = new JTextField[3];
+			
+			input.setLayout(new GridLayout(3,2,5,15));
+			
+			for(int i=0; i<text.length; i++) {
+				la = new JLabel(text[i]);
+				la.setHorizontalAlignment(JLabel.CENTER);
+				tf[i] = new JTextField(20);
+				input.add(la);
+				input.add(tf[i]);
+			}
+			add(input);
+			input.setPreferredSize(new Dimension(260, 210));
+			
+			JPanel person = new JPanel();
+			
+			person.setBorder(new TitledBorder(new LineBorder(Color.BLUE, 2), "신상정보"));
+			
+			String view[] = {"나이","성별","출신도","생일"};
+			
+			person.setLayout(new GridLayout(4, 2, 0, 30));
+			
+			for(int i=0; i<view.length; i++) {
+				la2 = new JLabel(view[i]);
+				la2.setHorizontalAlignment(JLabel.LEFT);
+				person.add(la2);
+			}
+			add(person);
+			person.setPreferredSize(new Dimension(260, 210));
+			
+			
+			
+			
+			//'정보검색' 카드 내용 만들기
+			search.setBorder(new TitledBorder(new LineBorder(Color.BLUE, 2), "정보검색"));
+			//논리적 그룹화
+			ButtonGroup group = new ButtonGroup();
+			JRadioButton[] searchRadio = new JRadioButton[3];
+			String[] search_name = {"이름","직업","출신도"};
+			
+			JTextField txt = new JTextField(10);
+			
+			JButton searchButton = new JButton("찾기");
+			JButton exitButton = new JButton("나가기");
+			
+			//개발자 자유 배치
+			int x = -70;
+			search.setLayout(null);
+			search.setPreferredSize(new Dimension(260, 210));
+			
+			for(int i=0; i<searchRadio.length; i++) {
+				searchRadio[i] = new JRadioButton(search_name[i]);
+				searchRadio[i].setBounds(x+=80, 30, 65, 30);
+				
+				group.add(searchRadio[i]);
+				search.add(searchRadio[i]);
+			}
+			txt.setBounds(25, 80, 200, 30);
+			searchButton.setBounds(25, 130, 70, 30);
+			exitButton.setBounds(115, 130, 110, 30);
+			search.add(txt); search.add(searchButton); search.add(exitButton);
+			
+			add(search, "정보검색 카드");
+			
+			
+			
+		}
+
+		
+	}
+	
+	public static void main(String[] args) {
+		Test test = new Test();
+
+	}
+
+}
